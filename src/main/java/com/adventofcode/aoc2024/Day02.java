@@ -1,35 +1,16 @@
 package com.adventofcode.aoc2024;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
-import lombok.With;
-
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Scanner;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
 public class Day02 {
-    @Getter
-    @AllArgsConstructor
-    @ToString
-    public static class LineInfo {
-        private final List<Integer> line;
-        private final boolean increasing;
-        private final boolean decreasing;
-    }
-
     public static void main(String[] args) throws URISyntaxException, IOException {
         new Day02().solve();
     }
@@ -96,9 +77,8 @@ public class Day02 {
         List<List<Integer>> lists = parseInputToListOLists(content);
 
         long count = lists.stream()
-                .map(l -> new LineInfo(l, IS_INCREASING.test(l), IS_DECREASING.test(l)))
-                //.filter(l -> IS_SAFE.test(l.getLine()))
-                .filter(l -> IS_SAFE_WITH_ONE_REMOVAL.test(l.getLine()))
+                //.filter(IS_SAFE)
+                .filter(IS_SAFE_WITH_ONE_REMOVAL)
                 .count();
 
 
