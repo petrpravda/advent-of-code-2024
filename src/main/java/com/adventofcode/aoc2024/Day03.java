@@ -15,6 +15,8 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.adventofcode.aoc2024.Util.readResourceFile;
+
 public class Day03 {
     @With
     @NoArgsConstructor
@@ -30,11 +32,7 @@ public class Day03 {
     }
 
     private void solve() throws IOException, URISyntaxException {
-        String fileName = "input/day03.txt";
-        Path filePath = Path.of(
-                Objects.requireNonNull(getClass().getClassLoader().getResource(fileName)).toURI()
-        );
-        String content = Files.readString(filePath);
+        String content = readResourceFile("input/day03.txt");
 
         // Parse valid operations
         List<ArgumentsPair> pairs = parseValidOperationsSwitchable(content);
