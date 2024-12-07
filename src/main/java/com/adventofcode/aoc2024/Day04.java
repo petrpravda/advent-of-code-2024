@@ -10,8 +10,12 @@ import lombok.With;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 
@@ -27,6 +31,9 @@ public class Day04 {
     public static class Direction {
         Integer rowDelta;
         Integer colDelta;
+        Boolean flipRows;
+        Boolean flipCols;
+        Boolean flipAxis;
 
         @Override
         public boolean equals(Object o) {
@@ -49,9 +56,11 @@ public class Day04 {
         String content = readResourceFile("input/day04.txt");
 
         List<List<Character>> matrix = parseCharsMatrix(content);
-        List<List<String>> vectors = prepareVectors(matrix);
-        int count = countXmasSubstrings(vectors);
-        System.out.println(count);
+//        List<List<String>> vectors = prepareVectors(matrix);
+//        int count = countXmasSubstrings(vectors);
+//        System.out.println(count);
+
+        System.out.println(countXmasCrosses(matrix));
     }
 
     int countXmasSubstrings(List<List<String>> vectors) {
@@ -63,14 +72,14 @@ public class Day04 {
 
     List<List<String>> prepareVectors(List<List<Character>> matrix) {
         return List.of(
-                generateStringsByDirection(matrix, new Direction(0, 1)),  // Horizontal
-                generateStringsByDirection(matrix, new Direction(0, -1)), // Horizontal Reverse
-                generateStringsByDirection(matrix, new Direction(1, 0)),  // Vertical
-                generateStringsByDirection(matrix, new Direction(-1, 0)), // Vertical Reverse
-                generateStringsByDirection(matrix, new Direction(1, 1)),  // Diagonal
-                generateStringsByDirection(matrix, new Direction(-1, -1)), // Diagonal Reverse
-                generateStringsByDirection(matrix, new Direction(1, -1)), // Antidiagonal
-                generateStringsByDirection(matrix, new Direction(-1, 1))  // Antidiagonal Reverse
+                generateStringsByDirection(matrix, new Direction(0, 1, false, false, false)),  // Horizontal
+                generateStringsByDirection(matrix, new Direction(0, -1, false, true, false)), // Horizontal Reverse
+                generateStringsByDirection(matrix, new Direction(1, 0, false, false, true)),  // Vertical
+                generateStringsByDirection(matrix, new Direction(-1, 0, true, false, true)), // Vertical Reverse
+                generateStringsByDirection(matrix, new Direction(1, 1, false, false, false)),  // Diagonal
+                generateStringsByDirection(matrix, new Direction(-1, -1, true, false, false)), // Diagonal Reverse
+                generateStringsByDirection(matrix, new Direction(1, -1, false, true, false)), // Antidiagonal
+                generateStringsByDirection(matrix, new Direction(-1, 1, true, true, false))  // Antidiagonal Reverse
         );
     }
 
@@ -103,7 +112,137 @@ public class Day04 {
         return matrix;
     }
 
-//    List<String> generateStringsByDirection(List<List<Character>> matrix, Direction direction) {
+    List<String> generateStringsByDirection(List<List<Character>> matrix, Direction direction) {
+        int size = matrix.size();
+        List<List<Character>> transformedMatrix = new ArrayList<>(matrix);
+
+        // Flip the matrix rows, columns, and axis based on the direction flags
+        if (direction.flipRows != null && direction.flipRows) {
+            transformedMatrix = flipMatrixRows(transformedMatrix);
+        }
+        if (direction.flipCols != null && direction.flipCols) {
+            transformedMatrix = flipMatrixColumns(transformedMatrix);
+        }
+        if (direction.flipAxis != null && direction.flipAxis) {
+            transformedMatrix = flipMatrixDiagonally(transformedMatrix);
+        }
+
+        List<String> result = new ArrayList<>();
+
+
+        if (direction.rowDelta == 0 || direction.colDelta == 0) { // Horizontal or Vertical
+            for (List<Character> row : transformedMatrix) {
+                result.add(row.stream().map(String::valueOf).collect(Collectors.joining()));
+            }
+        } else {
+            for (int d = 0; d < size; d++) {
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i <= d; i++) {
+                    sb.append(transformedMatrix.get(d - i).get(i));
+                }
+                result.add(sb.toString());
+            }
+            for (int d = 1; d < size; d++) {
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < size - d; i++) {
+                    sb.append(transformedMatrix.get(size - 1 - i).get(d + i));
+                }
+                result.add(sb.toString());
+            }
+        }
+
+        return result;
+    }
+
+    List<List<Character>> flipMatrixRows(List<List<Character>> matrix) {
+        List<List<Character>> flipped = new ArrayList<>(matrix);
+        Collections.reverse(flipped);
+        return flipped;
+    }
+
+    // Helper function to flip columns of the matrix
+    List<List<Character>> flipMatrixColumns(List<List<Character>> matrix) {
+        List<List<Character>> flipped = new ArrayList<>();
+        for (List<Character> row : matrix) {
+            List<Character> reversedRow = new ArrayList<>(row);
+            Collections.reverse(reversedRow);
+            flipped.add(reversedRow);
+        }
+        return flipped;
+    }
+
+    List<List<Character>> flipMatrixDiagonally(List<List<Character>> matrix) {
+        int size = matrix.size();
+        List<List<Character>> flipped = new ArrayList<>(size);
+
+        // Create new lists for each row in the new flipped matrix
+        for (int i = 0; i < size; i++) {
+            flipped.add(new ArrayList<>(size));
+        }
+
+        // Perform the flip by swapping (i, j) and (j, i)
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
+                flipped.get(j).add(matrix.get(i).get(j));
+            }
+        }
+
+        return flipped;
+    }
+
+    private int countOccurrences(String text, String substring) {
+        int count = 0;
+        int index = 0;
+
+        while ((index = text.indexOf(substring, index)) != -1) {
+            count++;
+            index += substring.length(); // Move index to avoid overlapping matches
+        }
+
+        return count;
+    }
+
+    public int countXmasCrosses(List<List<Character>> matrix) {
+        int count = 0;
+        int size = matrix.size();
+
+        // Iterate through each cell of the matrix, considering it as a potential center of an X
+        for (int i = 1; i < size - 1; i++) {
+            for (int j = 1; j < size - 1; j++) {
+                // Check for X pattern starting at (i, j)
+                if (isXMasCross(matrix, i, j)) {
+                    count++;
+                }
+            }
+        }
+
+        return count;
+    }
+
+    private boolean isXMasCross(List<List<Character>> matrix, int row, int col) {
+        // Check for the "MAS" in the X-shape, we need to check in both diagonal directions
+        if (matrix.get(row).get(col) != 'A') {
+            return false;
+        }
+
+        // Fetch the diagonal characters
+        Character topLeft = matrix.get(row - 1).get(col - 1);
+        Character topRight = matrix.get(row - 1).get(col + 1);
+        Character bottomLeft = matrix.get(row + 1).get(col - 1);
+        Character bottomRight = matrix.get(row + 1).get(col + 1);
+
+        // Check both diagonals for valid "M", "A", "S" pattern
+        return checkDiagonal(topLeft, bottomRight) && checkDiagonal(topRight, bottomLeft);
+    }
+
+    private boolean checkDiagonal(Character first, Character second) {
+        // Check if the set contains "M" and "S" (ignoring other characters)
+        return new HashSet<>(Arrays.asList(first, second)).containsAll(Set.of('M', 'S'));
+    }
+
+
+
+    //    List<String> generateStringsByDirection(List<List<Character>> matrix, Direction direction) {
 //        int size = matrix.size();
 //        List<String> result = new ArrayList<>();
 //
@@ -139,108 +278,4 @@ public class Day04 {
 //        return result;
 //    }
 
-    List<String> generateStringsByDirection(List<List<Character>> matrix, Direction direction) {
-        int size = matrix.size();
-        List<String> result = new ArrayList<>();
-
-        if (direction.equals(new Direction(0, 1))) { // Horizontal
-            for (List<Character> row : matrix) {
-                result.add(row.stream().map(String::valueOf).collect(Collectors.joining()));
-            }
-        } else if (direction.equals(new Direction(0, -1))) { // Horizontal Reverse
-            for (List<Character> row : matrix) {
-                result.add(new StringBuilder(row.stream().map(String::valueOf).collect(Collectors.joining())).reverse().toString());
-            }
-        } else if (direction.equals(new Direction(1, 0))) { // Vertical
-            for (int col = 0; col < size; col++) {
-                StringBuilder sb = new StringBuilder();
-                for (int row = 0; row < size; row++) {
-                    sb.append(matrix.get(row).get(col));
-                }
-                result.add(sb.toString());
-            }
-        } else if (direction.equals(new Direction(-1, 0))) { // Vertical Reverse
-            for (int col = 0; col < size; col++) {
-                StringBuilder sb = new StringBuilder();
-                for (int row = 0; row < size; row++) {
-                    sb.append(matrix.get(row).get(col));
-                }
-                result.add(sb.reverse().toString());
-            }
-        } else if (direction.equals(new Direction(1, 1))) { // Diagonal
-            for (int d = 0; d < size; d++) {
-                StringBuilder sb = new StringBuilder();
-                for (int i = 0; i <= d; i++) {
-                    sb.append(matrix.get(d - i).get(i));
-                }
-                result.add(sb.toString());
-            }
-            for (int d = 1; d < size; d++) {
-                StringBuilder sb = new StringBuilder();
-                for (int i = 0; i < size - d; i++) {
-                    sb.append(matrix.get(size - 1 - i).get(d + i));
-                }
-                result.add(sb.toString());
-            }
-        } else if (direction.equals(new Direction(-1, -1))) { // Diagonal Reverse
-            for (int d = 0; d < size; d++) {
-                StringBuilder sb = new StringBuilder();
-                for (int i = 0; i <= d; i++) {
-                    sb.append(matrix.get(d - i).get(i));
-                }
-                result.add(sb.reverse().toString());
-            }
-            for (int d = 1; d < size; d++) {
-                StringBuilder sb = new StringBuilder();
-                for (int i = 0; i < size - d; i++) {
-                    sb.append(matrix.get(size - 1 - i).get(d + i));
-                }
-                result.add(sb.reverse().toString());
-            }
-        } else if (direction.equals(new Direction(1, -1))) { // Antidiagonal
-            for (int d = 0; d < size; d++) {
-                StringBuilder sb = new StringBuilder();
-                for (int i = 0; i <= d; i++) {
-                    sb.append(matrix.get(i).get(d - i));
-                }
-                result.add(sb.toString());
-            }
-            for (int d = 1; d < size; d++) {
-                StringBuilder sb = new StringBuilder();
-                for (int i = 0; i < size - d; i++) {
-                    sb.append(matrix.get(d + i).get(size - 1 - i));
-                }
-                result.add(sb.toString());
-            }
-        } else if (direction.equals(new Direction(-1, 1))) { // Antidiagonal Reverse
-            for (int d = 0; d < size; d++) {
-                StringBuilder sb = new StringBuilder();
-                for (int i = 0; i <= d; i++) {
-                    sb.append(matrix.get(i).get(d - i));
-                }
-                result.add(sb.reverse().toString());
-            }
-            for (int d = 1; d < size; d++) {
-                StringBuilder sb = new StringBuilder();
-                for (int i = 0; i < size - d; i++) {
-                    sb.append(matrix.get(d + i).get(size - 1 - i));
-                }
-                result.add(sb.reverse().toString());
-            }
-        }
-
-        return result;
-    }
-
-    private int countOccurrences(String text, String substring) {
-        int count = 0;
-        int index = 0;
-
-        while ((index = text.indexOf(substring, index)) != -1) {
-            count++;
-            index += substring.length(); // Move index to avoid overlapping matches
-        }
-
-        return count;
-    }
 }
